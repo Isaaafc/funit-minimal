@@ -278,3 +278,71 @@ class Decoder(nn.Module):
         x = self.conv4(x)
 
         return x
+
+class Generator(nn.Module):
+    def __init__(self, in_dim):
+        super(Generator, self).__init__()
+
+        self.contentencoder = ContentEncoder()
+        self.classencoder = ClassEncoder()
+        self.decoder = Decoder(in_dim)
+
+    def forward(self, x, classes):
+        content_code = self.contentencoder(x)
+        class_codes = list()
+
+        for y in classes:
+            class_codes.append(self.classencoder(y))
+        
+        class_codes = torch.stack(class_codes, dim=0)
+        class_code = torch.mean(class_codes, dim=0)
+
+        out = self.decoder(content_code, class_code)
+
+        return out
+
+class DiscriminatorLayer(nn.Module):
+    def __init__(self, features):
+        super(DiscriminatorLayer, self).__init__()
+
+        self.layer = nn.Sequential(
+            ResidualBlock(features=features),
+            ResidualBlock(features=features),
+            nn.AvgPool2d(2, 2)
+        )
+    
+    def forward(self, x):
+        x = self.layer(x)
+
+        return x
+        
+class Discriminator(nn.Module):
+    def __init__(self, num_classes):
+        super(Discriminator, self).__init__()
+
+        self.conv1 = nn.Conv2d(
+            in_channels=64, out_channels=128,
+            kernel_size=3, stride=1, padding=1
+        )
+        self.layer1 = DiscriminatorLayer(128)
+        self.layer2 = DiscriminatorLayer(256)
+        self.layer3 = DiscriminatorLayer(512)
+        self.layer4 = DiscriminatorLayer(1024)
+        self.residual = nn.Sequential(
+            ResidualBlock(features=1024),
+            ResidualBlock(features=2014)
+        )
+        self.conv2 = nn.Conv2d(
+            in_channels=1024, out_channels=num_classes,
+            kernel_size=1, stride=1, padding=0
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.residual(x)
+
+        return x
