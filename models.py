@@ -90,35 +90,35 @@ class ClassEncoder(nn.Module):
                 in_channels=3, out_channels=64, kernel_size=4, 
                 stride=2, padding=1, bias=False
             ),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv2 = nn.Sequential(
             nn.Conv2d(
                 in_channels=64, out_channels=128, kernel_size=4,
                 stride=2, padding=1, bias=False
             ),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv3 = nn.Sequential(
             nn.Conv2d(
                 in_channels=128, out_channels=256, kernel_size=4, 
                 stride=2, padding=1, bias=False
             ),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv4 = nn.Sequential(
             nn.Conv2d(
                 in_channels=256, out_channels=512, kernel_size=4, 
                 stride=2, padding=1, bias=False
             ),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv5 = nn.Sequential(
             nn.Conv2d(
                 in_channels=512, out_channels=1024, kernel_size=4, 
                 stride=2, padding=1, bias=False
             ),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.pool = nn.AvgPool2d(2, 2)
 
@@ -143,7 +143,7 @@ class ContentEncoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(64),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv2 = nn.Sequential(
             nn.Conv2d(
@@ -151,7 +151,7 @@ class ContentEncoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(128),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv3 = nn.Sequential(
             nn.Conv2d(
@@ -159,7 +159,7 @@ class ContentEncoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(256),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv4 = nn.Sequential(
             nn.Conv2d(
@@ -167,15 +167,15 @@ class ContentEncoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(512),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.residual1 = nn.Sequential(
             ResidualBlock(features=512),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.residual2 = nn.Sequential(
             ResidualBlock(features=512),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
 
     def forward(self, x):
@@ -215,7 +215,7 @@ class AdaInResBlock(nn.Module):
         return x
 
 # Class code input: FC-256 > FC-256 > FC-256
-# Content code input: AdaIN-ResBlk-512 > AdaInResBlk-512 > ConvTrans-256 > ConvTrans-128 > ConvTrans-64 > ConvTrans-3
+# Content code input: AdaInResBlk-512 > AdaInResBlk-512 > ConvTrans-256 > ConvTrans-128 > ConvTrans-64 > ConvTrans-3
 class Decoder(nn.Module):
     def __init__(self, in_dim):
         super(Decoder, self).__init__()
@@ -223,15 +223,15 @@ class Decoder(nn.Module):
         self.adain = AdaInResBlock()
         self.fc1 = nn.Sequential(
             nn.Linear(in_dim, 256),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.fc2 = nn.Sequential(
             nn.Linear(256, 256),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.fc3 = nn.Sequential(
             nn.Linear(256, self.adain.total_num_params),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv1 = nn.Sequential(
             nn.ConvTranspose2d(
@@ -239,7 +239,7 @@ class Decoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(256),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv2 = nn.Sequential(
             nn.ConvTranspose2d(
@@ -247,7 +247,7 @@ class Decoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(128),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv3 = nn.Sequential(
             nn.ConvTranspose2d(
@@ -255,7 +255,7 @@ class Decoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(64),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
         self.conv4 = nn.Sequential(
             nn.ConvTranspose2d(
@@ -263,7 +263,7 @@ class Decoder(nn.Module):
                 stride=2, padding=1, bias=False
             ),
             nn.InstanceNorm2d(3),
-            nn.ReLU(0.2, inplace=True)
+            nn.ReLU(True)
         )
     
     def forward(self, x, cls_in):

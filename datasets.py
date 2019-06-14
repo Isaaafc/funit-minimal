@@ -11,4 +11,4 @@ def cifar_data(image_size=28, out_dir=DATA_DIR):
         ]
     )
     out_dir = os.path.join(out_dir, 'cifar')
-    return datasets.CIFAR10(root=out_dir, train=True, transforms=compose, download=True)
+    return datasets.CIFAR10(root=out_dir, train=True, transform=compose, download=True)
