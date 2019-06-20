@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 
@@ -8,6 +9,9 @@ class ResidualBlock(nn.Module):
     def __init__(self, features, norm="in"):
         super(ResidualBlock, self).__init__()
 
+        self.weight = None
+        self.bias = None
+        
         norm_layer = AdaptiveInstanceNorm2d if norm == "adain" else nn.InstanceNorm2d
 
         self.block = nn.Sequential(
@@ -86,7 +90,7 @@ class ClassEncoder(nn.Module):
         super(ClassEncoder, self).__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv1d(
+            nn.Conv2d(
                 in_channels=3, out_channels=64, kernel_size=4, 
                 stride=2, padding=1, bias=False
             ),
@@ -127,6 +131,7 @@ class ClassEncoder(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
+        x = self.conv5(x)
         x = self.pool(x)
 
         return x
@@ -138,7 +143,7 @@ class ContentEncoder(nn.Module):
         super(ContentEncoder, self).__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv1d(
+            nn.Conv2d(
                 in_channels=3, out_channels=64, kernel_size=4, 
                 stride=2, padding=1, bias=False
             ),
@@ -194,35 +199,38 @@ class AdaInResBlock(nn.Module):
     def __init__(self):
         super(AdaInResBlock, self).__init__()
 
-        self.residual = nn.Sequential(
-            ResidualBlock(features=512, norm='adain'),
-            ResidualBlock(features=512, norm='adain')
-        )
+        self.residual1 = ResidualBlock(features=512, norm='adain')
+        self.residual2 = ResidualBlock(features=512, norm='adain')
 
     # cls_out: decoded class latent code
     def forward(self, x, cls_out):
-        for m in self.residual.children():
-            mean = cls_out[:, :512]
-            std = cls_out[:, 512:2 * 512]
+        cls_out = cls_out.squeeze()
 
-            m.bias = mean.contiguous.view(-1)
-            m.weight = std.contiguous.view(-1)
+        self.residual1.bias = cls_out[:, :512]
+        self.residual1.weight = cls_out[:, 512:2 * 512]
 
-            cls_out = cls_out[:2 * 512]
-        
-        x = self.residual(x)
+        cls_out = cls_out[:2 * 512]
+
+        self.residual2.bias = cls_out[:, :512]
+        self.residual2.weight = cls_out[:, 512:2 * 512]
+
+        print(self.residual1.bias, self.residual1.weight)
+        print(self.residual2.bias, self.residual2.weight)
+
+        x = self.residual1(x)
+        x = self.residual2(x)
 
         return x
 
 # Class code input: FC-256 > FC-256 > FC-256
 # Content code input: AdaInResBlk-512 > AdaInResBlk-512 > ConvTrans-256 > ConvTrans-128 > ConvTrans-64 > ConvTrans-3
 class Decoder(nn.Module):
-    def __init__(self, in_dim):
+    def __init__(self):
         super(Decoder, self).__init__()
 
         self.adain = AdaInResBlock()
         self.fc1 = nn.Sequential(
-            nn.Linear(in_dim, 256),
+            nn.Linear(1, 256),
             nn.ReLU(True)
         )
         self.fc2 = nn.Sequential(
@@ -271,6 +279,8 @@ class Decoder(nn.Module):
         cls_out = self.fc2(cls_out)
         cls_out = self.fc3(cls_out)
 
+        print(cls_out.size())
+
         x = self.adain(x, cls_out)
         x = self.conv1(x)
         x = self.conv2(x)
@@ -280,19 +290,20 @@ class Decoder(nn.Module):
         return x
 
 class Generator(nn.Module):
-    def __init__(self, in_dim):
+    def __init__(self):
         super(Generator, self).__init__()
 
         self.contentencoder = ContentEncoder()
         self.classencoder = ClassEncoder()
-        self.decoder = Decoder(in_dim)
+        self.decoder = Decoder()
 
     def forward(self, x, classes):
-        content_code = self.contentencoder(x)
         class_codes = list()
 
         for y in classes:
             class_codes.append(self.classencoder(y))
+
+        content_code = self.contentencoder(x)
         
         class_codes = torch.stack(class_codes, dim=0)
         class_code = torch.mean(class_codes, dim=0)
@@ -345,4 +356,23 @@ class Discriminator(nn.Module):
         x = self.layer4(x)
         x = self.residual(x)
 
+        return x
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(x.size(0), 16 * 5 * 5)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
         return x
