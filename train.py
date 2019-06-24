@@ -49,7 +49,6 @@ def get_data_loaders(image_size, train=True):
 
 if __name__ == '__main__':
     generator = models.Generator()
-    net = models.Net()
     content_loader, class_loader = get_data_loaders(image_size, True)
 
     # Training
@@ -58,6 +57,5 @@ if __name__ == '__main__':
             content_var = content_image[0]
             class_var = class_image[0].unsqueeze(0)
 
-            print(content_var.size(0), class_var.size(0))
             fake_data = generator(content_var, class_var).detach()
             break
