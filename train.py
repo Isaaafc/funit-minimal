@@ -36,8 +36,8 @@ def noise(size):
 def get_data_loaders(image_size, train=True):
     ds = datasets.cifar_data(image_size=image_size, train=train)
 
-    content_weights = [1 if label < splits[0] and label >= splits[1] else 0 for data, label in ds]
-    class_weights = [1 if label < splits[1] and label >= splits[2] else 0 for data, label in ds]
+    content_weights = [1 if label < splits[0] and label >= splits[1] else 0 for _, label in ds]
+    class_weights = [1 if label < splits[1] and label >= splits[2] else 0 for _, label in ds]
 
     content_sampler = WeightedRandomSampler(weights=content_weights, num_samples=len([x for x in content_weights if x == 1]))
     class_sampler = WeightedRandomSampler(weights=class_weights, num_samples=len([x for x in class_weights if x == 1]))
@@ -46,6 +46,9 @@ def get_data_loaders(image_size, train=True):
     class_loader = DataLoader(ds, sampler=class_sampler)
 
     return content_loader, class_loader
+
+def recon_criterion(self, input, target):
+    return torch.mean(torch.abs(input - target))
 
 if __name__ == '__main__':
     generator = models.Generator()
@@ -58,4 +61,5 @@ if __name__ == '__main__':
             class_var = class_image[0].unsqueeze(0)
 
             fake_data = generator(content_var, class_var).detach()
+            
             break
