@@ -10,17 +10,11 @@ import datasets
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import  WeightedRandomSampler
 
-gan_loss = nn.BCELoss()
-# The paper was not clear about this loss, as it references VAE papers using BSE but uses L1 itself
-content_reconstruction_loss = nn.L1Loss()
-# Same as content reconstruction loss: unclear
-feature_matching_loss = nn.L1Loss()
-
 num_epochs = 1
 image_size = 32
 num_workers = 4
 # Num of: source class, target class, test class
-splits = [7, 2, 1]
+splits = [8, 1, 1]
 
 def images_to_vectors(images, image_size):
     return images.view(images.size(0), image_size * image_size)
@@ -51,7 +45,6 @@ def recon_criterion(self, input, target):
     return torch.mean(torch.abs(input - target))
 
 if __name__ == '__main__':
-    generator = models.Generator()
     content_loader, class_loader = get_data_loaders(image_size, True)
 
     # Training
@@ -60,6 +53,4 @@ if __name__ == '__main__':
             content_var = content_image[0]
             class_var = class_image[0].unsqueeze(0)
 
-            fake_data = generator(content_var, class_var).detach()
             
-            break

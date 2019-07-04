@@ -353,8 +353,9 @@ class DiscriminatorLayer(nn.Module):
         x = self.layer(x)
 
         return x
-        
+       
 class Discriminator(nn.Module):
+    # num_classes: No. of source classes
     def __init__(self, num_classes):
         super(Discriminator, self).__init__()
 
