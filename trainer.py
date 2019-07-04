@@ -37,12 +37,14 @@ class FUNIT_Trainer(nn.Module):
         self.dis_opt.zero_grad()
         
         fake_data = self.generator(content_image, class_images)
-        x = self.discriminator(fake_data)
+        x_fake = self.discriminator(fake_data)
+        x_real = self.discriminator(class_images)
+
         loss = 0
 
         loss_recon = self.content_reconstruction_loss(fake_data, content_image)
-        loss_fm = self.feature_matching_loss()
+        loss_fm = self.feature_matching_loss(x_fake, x_real)
         loss_gan = self.gan_loss()
+
         
         self.dis_opt.step()
-        
