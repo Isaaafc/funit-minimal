@@ -341,11 +341,12 @@ class Generator(nn.Module):
         return num_adain_params
 
 class DiscriminatorLayer(nn.Module):
-    def __init__(self, features):
+    def __init__(self, in_channels, out_channels):
         super(DiscriminatorLayer, self).__init__()
 
         self.layer = nn.Sequential(
-            ResBlocks(2, features),
+            ResBlock(),
+            ResBlock(),
             nn.AvgPool2d(2, 2)
         )
     
@@ -358,8 +359,11 @@ class Discriminator(nn.Module):
     # num_classes: No. of source classes
     def __init__(self, num_classes):
         super(Discriminator, self).__init__()
-
         self.conv1 = nn.Conv2d(
+            in_channels=3, out_channels=64,
+            kernel_size=3, stride=1, padding=1
+        )
+        self.conv2 = nn.Conv2d(
             in_channels=64, out_channels=128,
             kernel_size=3, stride=1, padding=1
         )
@@ -368,18 +372,20 @@ class Discriminator(nn.Module):
         self.layer3 = DiscriminatorLayer(512)
         self.layer4 = DiscriminatorLayer(1024)
         self.residual = ResBlocks(2, 1024)
-        self.conv2 = nn.Conv2d(
+        self.conv3 = nn.Conv2d(
             in_channels=1024, out_channels=num_classes,
             kernel_size=1, stride=1, padding=0
         )
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.conv2(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.residual(x)
+        x = self.conv3(x)
 
         return x
 
