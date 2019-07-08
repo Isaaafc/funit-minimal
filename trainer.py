@@ -42,7 +42,10 @@ class FUNIT_Trainer(nn.Module):
         print('class images size:', class_images.size())
 
         x_fake = self.discriminator(fake_data)
-        x_real = self.discriminator(class_images)
+        x_real = []
+
+        for cls_img in class_images:
+            x_real.append(self.discriminator(cls_img))
 
         loss = 0
 

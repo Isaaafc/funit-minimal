@@ -302,7 +302,7 @@ class Generator(nn.Module):
 
         self.contentencoder = ContentEncoder()
         self.classencoder = ClassEncoder()
-        self.decoder = Decoder(n_upsample=3, n_res=2, dim=512, output_dim=3)
+        self.decoder = Decoder(n_upsample=4, n_res=2, dim=512, output_dim=3)
 
     def forward(self, x, classes):
         class_codes = list()
@@ -345,8 +345,8 @@ class DiscriminatorLayer(nn.Module):
         super(DiscriminatorLayer, self).__init__()
 
         self.layer = nn.Sequential(
-            ResBlock(),
-            ResBlock(),
+            ConvResBlock(in_channels, out_channels),
+            ResBlock(out_channels),
             nn.AvgPool2d(2, 2)
         )
     
@@ -363,29 +363,24 @@ class Discriminator(nn.Module):
             in_channels=3, out_channels=64,
             kernel_size=3, stride=1, padding=1
         )
-        self.conv2 = nn.Conv2d(
-            in_channels=64, out_channels=128,
-            kernel_size=3, stride=1, padding=1
-        )
-        self.layer1 = DiscriminatorLayer(128)
-        self.layer2 = DiscriminatorLayer(256)
-        self.layer3 = DiscriminatorLayer(512)
-        self.layer4 = DiscriminatorLayer(1024)
+        self.layer1 = DiscriminatorLayer(64, 128)
+        self.layer2 = DiscriminatorLayer(128, 256)
+        self.layer3 = DiscriminatorLayer(256, 512)
+        self.layer4 = DiscriminatorLayer(512, 1024)
         self.residual = ResBlocks(2, 1024)
-        self.conv3 = nn.Conv2d(
+        self.conv2 = nn.Conv2d(
             in_channels=1024, out_channels=num_classes,
             kernel_size=1, stride=1, padding=0
         )
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.conv2(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.residual(x)
-        x = self.conv3(x)
+        x = self.conv2(x)
 
         return x
 
@@ -453,6 +448,23 @@ class ResBlock(nn.Module):
         out = self.model(x)
         out += residual
         return out
+
+class ConvResBlock(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(ConvResBlock, self).__init__()
+        self.actv1 = nn.LeakyReLU(True)
+        self.conv1 = nn.Conv2d(input_dim, output_dim, 3, 1, 1)
+        self.actv2 = nn.LeakyReLU(True)
+        self.conv2 = nn.Conv2d(output_dim, output_dim, 3, 1, 1)
+        if input_dim != output_dim:
+            self.convs = nn.Conv2d(input_dim, output_dim, 1, 1)
+
+    def forward(self, x):
+        x = self.actv1(x)
+        s = self.convs(x) if hasattr(self, "convs") else x
+        x = self.conv1(x)
+        x = self.conv2(self.actv2(x))
+        return x + s
 
 class Conv2dBlock(nn.Module):
     def __init__(self, input_dim ,output_dim, kernel_size, stride,

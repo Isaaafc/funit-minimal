@@ -63,5 +63,5 @@ if __name__ == '__main__':
         for i, (content_image, class_image) in enumerate(zip(content_loader, class_loader)):
             content_var = content_image[0]
             class_var = class_image[0].unsqueeze(0)
-
+            
             trainer.dis_update(content_var, class_var)
