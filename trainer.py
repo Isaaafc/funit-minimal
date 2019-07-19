@@ -10,7 +10,7 @@ class FUNIT_Trainer(nn.Module):
         self.generator = models.Generator()
         self.discriminator = models.Discriminator(hyperparameters['source_classes'])
 
-        self.gan_loss = nn.BCELoss()
+        self.gan_loss = nn.BCELoss(size_average=True, reduce=True)
         # The paper was not clear about this loss, as it references VAE papers using BSE but uses L1 itself
         self.content_reconstruction_loss = nn.L1Loss(size_average=True, reduce=True)
         # Same as content reconstruction loss: unclear
@@ -42,15 +42,16 @@ class FUNIT_Trainer(nn.Module):
         print('class images size:', class_images.size())
 
         x_fake = self.discriminator(fake_data)
-        x_real = []
+        x_real = self.discriminator(class_images[0])
 
-        for cls_img in class_images:
-            x_real.append(self.discriminator(cls_img))
-
-        loss = 0
+        print(x_fake.requires_grad, x_real.requires_grad)
 
         loss_recon = self.content_reconstruction_loss(fake_data, content_image)
+        loss_gan = self.gan_loss(x_fake, x_real.detach())
         loss_fm = self.feature_matching_loss(x_fake, x_real)
-        loss_gan = self.gan_loss()
-        
+
+        loss = loss_recon + loss_fm + loss_gan
+        print('Loss: {}'.format(loss))
+
+        loss.backward()
         self.dis_opt.step()
