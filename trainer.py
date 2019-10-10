@@ -43,11 +43,14 @@ class FUNIT_Trainer(nn.Module):
 
         x_fake = self.discriminator(fake_data)
         x_real = self.discriminator(class_images[0])
+        x_real_detach = x_real.detach()
+
+        print('X real detached size:', x_real_detach)
 
         print(x_fake.requires_grad, x_real.requires_grad)
 
         loss_recon = self.content_reconstruction_loss(fake_data, content_image)
-        loss_gan = self.gan_loss(x_fake, x_real.detach())
+        loss_gan = self.gan_loss(x_fake, x_real_detach)
         loss_fm = self.feature_matching_loss(x_fake, x_real)
 
         loss = loss_recon + loss_fm + loss_gan
